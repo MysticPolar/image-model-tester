@@ -2,6 +2,18 @@
 
 A minimal workspace for comparing image-generation models: upload multiple references, enter one shared prompt, select models, generate 1 or 4 images per model, and compare or download the results.
 
+## GitHub Pages (github.io)
+
+The Pages-ready interface is in `docs/`. In repository **Settings → Pages**, select **Deploy from a branch → main → /docs → Save**. The project URL is `https://mysticpolar.github.io/image-model-tester/` after GitHub finishes publishing.
+
+On that page, click **Connect cloud** and sign in in the popup. Keep that popup open while generating or syncing. The interface stays on github.io; generation, separate encrypted Pro/Flash keys, and workspace/image/CSV storage use the existing private Sites backend. Use the same ChatGPT account on each PC to access the same workspace. Without the connection, local uploads, cached records, human reviews, and local CSV/ZIP exports work, while generation and cloud sync require reconnecting.
+
+GitHub Pages serves only public static interface files. No keys, uploaded images, workspace data, or outputs are committed to `docs/`. The cloud bridge accepts only the fixed GitHub account origin, its exact opener window, a random per-window channel, and the workspace/provider/generation routes. API keys never go to GitHub's repository or the Volcengine API directly from Pages. Authentication and the private backend audience are preserved.
+
+After editing public UI assets, run `pnpm build:pages` and commit the regenerated `docs/` files. GitHub automatically republishes changes to this folder after Pages is enabled. Backend changes still require a Sites deployment. The existing hosted tester continues to work independently.
+
+If the popup is blocked, allow popups for the github.io page and reconnect. If the cloud window reports a sign-in error, open the hosted tester directly. Production popup connection and paid generation still require a signed-in browser and valid Ark access.
+
 ## Use on either PC
 
 Open https://image-model-tester-yuhao.yuhaoguo.chatgpt.site and sign in with the same ChatGPT account. Wait for **Saved to cloud** before switching devices. References, prompts, model configurations, results, and history are saved to an account-scoped R2 object. Conflicting changes from another device are rejected rather than silently overwritten.
@@ -93,7 +105,7 @@ Return four elements for `n: 4`. Partial outputs are preserved. Each model reque
 
 ## Hosting
 
-The production app is deployed through Sites. Preserve the existing Site identity when updating it. GitHub Pages alone cannot run this app's authenticated storage API.
+The production app is deployed through Sites. Preserve the existing Site identity when updating it. GitHub Pages hosts the interface in `docs/`; its cloud connection uses the existing authenticated Sites backend.
 
 For another host, implement authentication and a compatible R2 binding first. Do not trust visitor-supplied identity headers outside the Sites dispatch boundary.
 

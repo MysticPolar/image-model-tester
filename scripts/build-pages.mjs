@@ -1,0 +1,12 @@
+import {readFile,writeFile,mkdir,copyFile} from 'node:fs/promises';
+import {fileURLToPath} from 'node:url';
+import path from 'node:path';
+const root=fileURLToPath(new URL('..',import.meta.url)),output=path.join(root,'docs');
+await mkdir(output,{recursive:true});
+let html=await readFile(path.join(root,'public/workbench.html'),'utf8');
+html=html.replace('href="/"','href="./"').replace('<script type="module" src="app.js"></script>','<script type="module" src="pages-bootstrap.js"></script>');
+html=html.replace('</header>','</header><section class="pagesconnection"><div><strong>GitHub Pages tester</strong><p id="pagesConnectionStatus">Connect to generate and sync your saved tests.</p></div><button id="connectCloud" class="primary">Connect cloud</button></section>');
+await writeFile(path.join(output,'index.html'),html);
+for(const file of ['app.js','style.css','records-core.js','pages-bootstrap.js','bridge-policy.js','favicon.svg'])await copyFile(path.join(root,'public',file),path.join(output,file));
+await writeFile(path.join(output,'.nojekyll'),'');
+console.log('GitHub Pages files built in docs/');
