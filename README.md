@@ -8,13 +8,20 @@ Open https://image-model-tester-yuhao.yuhaoguo.chatgpt.site and sign in with the
 
 GitHub stores the source code; the published site runs the app. Cloning this repository does not download your hosted workspace or credentials. GitHub pushes do not automatically update the hosted site.
 
-## Current generation support
+## Seedream connection (Volcengine / 火山引擎)
 
-No provider is preconfigured. Add a model name, model ID, HTTPS gateway endpoint, and documented reference-image limit in the app. Your gateway must implement the contract below; arbitrary provider API URLs are not directly compatible.
+The tester includes Seedream 5.0 Pro (`doubao-seedream-5-0-pro-260628`) and Seedream 5.0 Flash (`doubao-seedream-5-0-flash-260915`). Both are configured for image-to-image generation: **one image per request, 1K / 9:16**, using Volcengine's documented `800x1424` portrait mapping. Your prompt and ordered references are sent unchanged. No automatic batching or prompt rewriting.
 
-Provider API keys belong on your gateway/server. The tester does not have an API-key field or store provider keys. The endpoint URL and model configuration sync across PCs. Endpoints must be accessible from the PC running the browser and allow CORS for the tester origin.
+1. Open the hosted tester and click **API settings**.
+2. Enter a standard Volcengine Ark API key with access to both models. Get it at https://ark.volcengine.com/region:cn-beijing/apikey . Agent/Coding Plan keys are not supported by this standard Ark connection.
+3. Save the key. It is encrypted with AES-GCM, bound to your account, and stored separately from workspace data. Only the key's last four characters are returned to the browser. No key is included in workspace exports or GitHub.
+4. Upload references, enter a prompt, select one or both models, and click Generate. Selecting both models makes one request to each, either together or sequentially.
 
-Four-image mode makes one request per model with `n: 4`. Describe desired views in your prompt. Front-first reference chaining is not implemented. Keep the generation tab open until results finish and show **Saved to cloud**.
+For Seedream, the four-image control is disabled. Limits: 10 reference images, under 10 MB each, and 32 MB combined JSON request. Model access and balance are checked by Volcengine when you generate; saving a key makes no paid generation call.
+
+The production Site has the `TESTER_KEY_ENCRYPTION_V1` secret configured. Do not rotate this secret without migrating encrypted keys. For local development, set this variable to a randomly generated 32-byte base64 value in ignored `.dev.vars` before starting the server. Never commit that file or use the hosted encryption secret in local development. Local credentials and storage remain separate from production.
+
+Custom models still use the generic gateway contract below; their provider keys belong on the gateway server.
 
 ## Run locally
 
@@ -69,7 +76,7 @@ Return four elements for `n: 4`. Partial outputs are preserved. Each model reque
 - Conflicts: conditional writes with revision tokens; reload from cloud when prompted.
 - Limits: 20 MB per reference file; 50 MB per cloud workspace payload.
 - ZIP export: original references, output files, and a manifest with prompts, settings, statuses, and timing.
-- Provider keys, uploaded images, caches, and generated outputs are excluded from source control.
+- Provider keys, encryption secrets, uploaded images, caches, and generated outputs are excluded from source control.
 
 ## Code map
 
@@ -92,4 +99,4 @@ For another host, implement authentication and a compatible R2 binding first. Do
 
 ## Verification
 
-The app has built successfully. Storage tests cover save/read, stale revisions, account isolation, request-origin checks, and anonymous rejection using a fake bucket. Provider generation and syncing across two actual signed-in PCs still require live verification.
+The app has built successfully. Storage tests cover save/read, stale revisions, account isolation, request-origin checks, and anonymous rejection using a fake bucket. Seedream payload, encryption, account binding, safe error handling, and one-request behavior are tested with fixtures. Live generation requires your actual Ark key and model access; syncing across two actual signed-in PCs still requires verification.

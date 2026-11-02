@@ -1,0 +1,7 @@
+import { env } from 'cloudflare:workers';
+import { getChatGPTUser } from '../../chatgpt-auth';
+import { providerStatus,saveProviderKey,type ProviderEnv } from '../../../lib/volcengine';
+export const dynamic='force-dynamic';
+const reply=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'private, no-store'}});
+export async function GET(){const user=await getChatGPTUser();if(!user)return reply({error:'Sign in to configure your API key.'},401);try{return reply(await providerStatus(env as unknown as ProviderEnv,user.userId))}catch{return reply({error:'Provider storage unavailable.'},503)}}
+export async function PUT(request:Request){const user=await getChatGPTUser();if(!user)return reply({error:'Sign in to configure your API key.'},401);if(request.headers.get('origin')!==new URL(request.url).origin)return reply({error:'Invalid origin.'},403);const raw=await request.text();if(raw.length>4096)return reply({error:'Invalid API key.'},400);let apiKey;try{apiKey=JSON.parse(raw).apiKey}catch{return reply({error:'Invalid request.'},400)}if(typeof apiKey!=='string'||apiKey.trim().length<12||apiKey.length>2048||/\s/.test(apiKey.trim()))return reply({error:'Enter an Ark API key without the Bearer prefix.'},400);try{await saveProviderKey(env as unknown as ProviderEnv,user.userId,apiKey.trim());return reply({connected:true})}catch{return reply({error:'Could not save the API key. Check provider encryption configuration.'},503)}}
