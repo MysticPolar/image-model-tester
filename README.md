@@ -14,6 +14,14 @@ After editing public UI assets, run `pnpm build:pages` and commit the regenerate
 
 If the popup is blocked, allow popups for the github.io page and reconnect. If the cloud window reports a sign-in error, open the hosted tester directly. Production popup connection and paid generation still require a signed-in browser and valid Ark access.
 
+## Team mode: Google Sheet + Drive folder + Claude Code judge
+
+The alternative backend for a team of testers is a Google Apps Script owned by one person (see [apps-script/README.md](apps-script/README.md) for the setup). Testers open the GitHub Pages site and generate; nobody signs in to Google or enters an API key. Every attempt becomes one row in the team's **test records** Sheet (the same 11 columns as the CSV, plus a hidden `record_id`), and the reference and output images are saved in a shared Drive folder using the ZIP export's folder layout. Humans review directly in the Sheet. The Seedream keys are set once by the owner in the script's properties and never reach a browser.
+
+The **judge** column is filled by Claude Code: run `/judge` in this repository. It pulls unjudged records with `scripts/judge.mjs`, views the images, scores them against [judge/rubric.md](judge/rubric.md), and writes the verdict, score, model, rubric version and date into the judge cell. The column is protected in the Sheet so only the owner and the judge write it.
+
+To switch the Pages site to team mode, fill `public/google-config.js` with the deployed script URL, token and links, run `pnpm build:pages`, and commit `docs/`. Leave `SCRIPT_URL` empty to keep the Sites popup bridge. Each browser keeps its own local workspace; the Sheet is the shared view. Records already saved in a browser are pushed to the Sheet the first time it loads in team mode.
+
 ## Use on either PC
 
 Open https://image-model-tester-yuhao.yuhaoguo.chatgpt.site and sign in with the same ChatGPT account. Wait for **Saved to cloud** before switching devices. References, prompts, model configurations, results, and history are saved to an account-scoped R2 object. Conflicting changes from another device are rejected rather than silently overwritten.

@@ -35,6 +35,9 @@ yarn-error.log*
 /.wrangler/
 /.sites-runtime/
 
+# Judge working copies pulled from the team Drive folder
+/.judge/
+
 # Workspace scaffolding and publication archives
 /.agents/
 /.codex/
