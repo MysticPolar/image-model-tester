@@ -20,4 +20,7 @@ for(const file of files)await copyFile(path.join(root,'public',file),path.join(o
 // Drop the other mode's bootstrap so the published site carries no unused backend code.
 for(const file of google?sitesFiles:googleFiles)await rm(path.join(output,file),{force:true});
 await writeFile(path.join(output,'.nojekyll'),'');
-console.log(`GitHub Pages files built in docs/ (${google?'Google team backend':'Sites popup bridge'})`);
+const bootstrap=google?'google-bootstrap.js':'pages-bootstrap.js';
+await writeFile(path.join(root,'index.html'),html.replace('href="style.css"','href="docs/style.css"').replace(`src="${bootstrap}"`,`src="docs/${bootstrap}"`));
+await writeFile(path.join(root,'.nojekyll'),'');
+console.log(`GitHub Pages entrypoints built for both repository root and docs/ (${google?'Google team backend':'Sites popup bridge'})`);

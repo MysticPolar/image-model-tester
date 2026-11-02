@@ -4,9 +4,9 @@ A minimal workspace for comparing image-generation models: upload multiple refer
 
 ## GitHub Pages (github.io)
 
-The Pages-ready interface is in `docs/`. In repository **Settings → Pages**, select **Deploy from a branch → main → /docs → Save**. The project URL is `https://mysticpolar.github.io/image-model-tester/` after GitHub finishes publishing.
+The Pages-ready interface is in `docs/`, with a repository-root entrypoint as well. Both **main → /(root)** and **main → /docs** publishing settings load the tester. The project URL is `https://mysticpolar.github.io/image-model-tester/` after GitHub finishes publishing.
 
-On that page, click **Connect cloud** and sign in in the popup. Keep that popup open while generating or syncing. The interface stays on github.io; generation, separate encrypted Pro/Flash keys, and workspace/image/CSV storage use the existing private Sites backend. Use the same ChatGPT account on each PC to access the same workspace. Without the connection, local uploads, cached records, human reviews, and local CSV/ZIP exports work, while generation and cloud sync require reconnecting.
+The published site currently runs in **team mode** (see below): testers open the page and generate, with no sign-in, and records go to the team Google Sheet. The rest of this section describes the alternative Sites mode, used when `SCRIPT_URL` in `public/google-config.js` is empty. In that mode, click **Connect cloud** and sign in in the popup. Keep that popup open while generating or syncing. The interface stays on github.io; generation, separate encrypted Pro/Flash keys, and workspace/image/CSV storage use the existing private Sites backend. Use the same ChatGPT account on each PC to access the same workspace. Without the connection, local uploads, cached records, human reviews, and local CSV/ZIP exports work, while generation and cloud sync require reconnecting.
 
 GitHub Pages serves only public static interface files. No keys, uploaded images, workspace data, or outputs are committed to `docs/`. The cloud bridge accepts only the fixed GitHub account origin, its exact opener window, a random per-window channel, and the workspace/provider/generation routes. API keys never go to GitHub's repository or the Volcengine API directly from Pages. Authentication and the private backend audience are preserved.
 
