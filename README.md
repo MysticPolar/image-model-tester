@@ -4,7 +4,7 @@ A minimal workspace for comparing image-generation models: upload multiple refer
 
 ## GitHub Pages (github.io)
 
-The Pages-ready interface is in `docs/`. In repository **Settings → Pages**, select **Deploy from a branch → main → /docs → Save**. The project URL is `https://mysticpolar.github.io/image-model-tester/` after GitHub finishes publishing.
+The Pages-ready interface is in `docs/`, with a repository-root entrypoint as well. Both **main → /(root)** and **main → /docs** publishing settings load the tester. The project URL is `https://mysticpolar.github.io/image-model-tester/` after GitHub finishes publishing.
 
 On that page, click **Connect cloud** and sign in in the popup. Keep that popup open while generating or syncing. The interface stays on github.io; generation, separate encrypted Pro/Flash keys, and workspace/image/CSV storage use the existing private Sites backend. Use the same ChatGPT account on each PC to access the same workspace. Without the connection, local uploads, cached records, human reviews, and local CSV/ZIP exports work, while generation and cloud sync require reconnecting.
 

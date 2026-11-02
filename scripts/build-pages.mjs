@@ -9,4 +9,6 @@ html=html.replace('</header>','</header><section class="pagesconnection"><div><s
 await writeFile(path.join(output,'index.html'),html);
 for(const file of ['app.js','style.css','records-core.js','pages-bootstrap.js','bridge-policy.js','favicon.svg'])await copyFile(path.join(root,'public',file),path.join(output,file));
 await writeFile(path.join(output,'.nojekyll'),'');
-console.log('GitHub Pages files built in docs/');
+await writeFile(path.join(root,'index.html'),html.replace('href="style.css"','href="docs/style.css"').replace('src="pages-bootstrap.js"','src="docs/pages-bootstrap.js"'));
+await writeFile(path.join(root,'.nojekyll'),'');
+console.log('GitHub Pages entrypoints built for both repository root and docs/');
