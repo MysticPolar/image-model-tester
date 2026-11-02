@@ -1,3 +1,4 @@
+import { archiveRecords } from '../../../lib/records';
 import { env } from 'cloudflare:workers';
 import { getChatGPTUser } from '../../chatgpt-auth';
 export const dynamic='force-dynamic';
@@ -6,7 +7,7 @@ export async function GET(){
  const user=await getChatGPTUser();if(!user)return reply({error:'Sign in with ChatGPT to access your workspace.'},401);
  const bucket=(env as unknown as {BUCKET:R2Bucket}).BUCKET;if(!bucket)return reply({error:'Cloud storage is unavailable.'},503);
  const object=await bucket.get('workspaces/'+encodeURIComponent(user.userId)+'.json');
- return reply({revision:object?.etag||null,workspace:object?await object.json():null});
+ return reply({revision:object?.etag||null,workspace:object?await object.json():null,tester:user.displayName,testerAccount:user.userId});
 }
 export async function PUT(request:Request){
  const user=await getChatGPTUser();if(!user)return reply({error:'Sign in with ChatGPT to save your workspace.'},401);
@@ -17,8 +18,13 @@ export async function PUT(request:Request){
  const raw=await request.text();if(raw.length>50*1024*1024)return reply({error:'Workspace exceeds the 50 MB cloud limit.'},413);
  const {workspace,revision}=JSON.parse(raw);
  if(!workspace||!Array.isArray(workspace.refs)||!Array.isArray(workspace.models)||!Array.isArray(workspace.runs)||!Array.isArray(workspace.selected)||typeof workspace.prompt!=='string')return reply({error:'Invalid workspace format.'},400);
+ const previous=await bucket.get('workspaces/'+encodeURIComponent(user.userId)+'.json');
+ const existing=previous?await previous.json<{runs?:Array<{id:string;testerAccount?:string}>}>():null;
+ const accounts=new Map((existing?.runs||[]).map(run=>[run.id,run.testerAccount]));
+ for(const run of workspace.runs){if(!run||!Array.isArray(run.results)||!Array.isArray(run.refs))return reply({error:'Invalid run format.'},400);run.testerAccount=accounts.get(run.id)||user.userId;}
  const object=await bucket.put('workspaces/'+encodeURIComponent(user.userId)+'.json',JSON.stringify(workspace),{httpMetadata:{contentType:'application/json'},onlyIf:revision?{etagMatches:revision}:{etagDoesNotMatch:'*'}});
  if(!object)return reply({error:'This workspace changed on another device. Reload from cloud before making further changes.'},409);
- return reply({revision:object.etag});
+ let recordsSaved=true;try{await archiveRecords(bucket,user.userId,object.etag,workspace)}catch{recordsSaved=false}
+ return reply({revision:object.etag,recordsSaved});
  }catch{return reply({error:'Could not save this workspace. Try again.'},500)}
 }
