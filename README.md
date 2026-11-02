@@ -13,8 +13,8 @@ GitHub stores the source code; the published site runs the app. Cloning this rep
 The tester includes Seedream 5.0 Pro (`doubao-seedream-5-0-pro-260628`) and Seedream 5.0 Flash (`doubao-seedream-5-0-flash-260915`). Both are configured for image-to-image generation: **one image per request, 1K / 9:16**, using Volcengine's documented `800x1424` portrait mapping. Your prompt and ordered references are sent unchanged. No automatic batching or prompt rewriting.
 
 1. Open the hosted tester and click **API settings**.
-2. Enter a standard Volcengine Ark API key with access to both models. Get it at https://ark.volcengine.com/region:cn-beijing/apikey . Agent/Coding Plan keys are not supported by this standard Ark connection.
-3. Save the key. It is encrypted with AES-GCM, bound to your account, and stored separately from workspace data. Only the key's last four characters are returned to the browser. No key is included in workspace exports or GitHub.
+2. Enter two standard Volcengine Ark API keys in the separate **Pro** and **Flash** fields, each with access to its respective model. Get it at https://ark.volcengine.com/region:cn-beijing/apikey . Agent/Coding Plan keys are not supported by this standard Ark connection.
+3. Save the keys. Each is encrypted with AES-GCM and bound to both your account and its model. The keys are stored separately from workspace data. Only their last four characters are returned to the browser. Leave a field blank to keep that model's existing key. No keys are included in workspace exports or GitHub. A previously saved shared key is not used as a fallback; enter the respective keys in the new fields.
 4. Upload references, enter a prompt, select one or both models, and click Generate. Selecting both models makes one request to each, either together or sequentially.
 
 For Seedream, the four-image control is disabled. Limits: 10 reference images, under 10 MB each, and 32 MB combined JSON request. Model access and balance are checked by Volcengine when you generate; saving a key makes no paid generation call.
