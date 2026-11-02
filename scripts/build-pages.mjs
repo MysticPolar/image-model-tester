@@ -1,4 +1,4 @@
-import {readFile,writeFile,mkdir,copyFile} from 'node:fs/promises';
+import {readFile,writeFile,mkdir,copyFile,rm} from 'node:fs/promises';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import path from 'node:path';
 const root=fileURLToPath(new URL('..',import.meta.url)),output=path.join(root,'docs');
@@ -14,7 +14,10 @@ const section=google
  :`<section class="pagesconnection"><div><strong>GitHub Pages tester</strong><p id="pagesConnectionStatus">Connect to generate and sync your saved tests.</p></div><button id="connectCloud" class="primary">Connect cloud</button></section>`;
 html=html.replace('</header>','</header>'+section);
 await writeFile(path.join(output,'index.html'),html);
-const files=google?['app.js','style.css','records-core.js','google-bootstrap.js','google-sync.js','google-config.js','favicon.svg']:['app.js','style.css','records-core.js','pages-bootstrap.js','bridge-policy.js','favicon.svg'];
+const googleFiles=['google-bootstrap.js','google-sync.js','google-config.js'],sitesFiles=['pages-bootstrap.js','bridge-policy.js'];
+const files=['app.js','style.css','records-core.js','favicon.svg',...(google?googleFiles:sitesFiles)];
 for(const file of files)await copyFile(path.join(root,'public',file),path.join(output,file));
+// Drop the other mode's bootstrap so the published site carries no unused backend code.
+for(const file of google?sitesFiles:googleFiles)await rm(path.join(output,file),{force:true});
 await writeFile(path.join(output,'.nojekyll'),'');
 console.log(`GitHub Pages files built in docs/ (${google?'Google team backend':'Sites popup bridge'})`);

@@ -33,6 +33,8 @@ In **Project settings → Script properties**, add:
 
 Use standard Ark keys. In the Ark console, give each key "自定义" permissions limited to its own model ID, so the Pro key can never be used for Flash and vice versa. All generations are billed to this Ark account.
 
+Generations are capped at **1000 per day for the whole team** (Pro and Flash together, counted before each Ark call, reset at midnight in the script's time zone). To change it, add a `DAILY_LIMIT` script property. The current count is in `GEN_USAGE` and in the `daily` field of the `status` reply; delete `GEN_USAGE` to reset it early.
+
 ## 4. Deploy as a web app
 
 1. **Deploy → New deployment → Web app.**
@@ -90,6 +92,6 @@ All calls are `POST` with a JSON body `{token, action, …}` and a JSON reply `{
 
 - Apps Script executions stop at 6 minutes, and `UrlFetchApp` has no configurable timeout. Seedream at 1K normally answers well inside that, but a very slow generation will fail with a timeout message. If this happens often, move generation to a Cloudflare Worker and keep this script for records.
 - A single `generate` call carries all references as base64 (the tester caps them at 10 MB each, 32 MB combined). Large batches are slow to upload from the browser; that is the same limit as before.
-- Anyone who knows the script URL and token can append rows. The token is in the public page source, so keep the repository or at least the Sheet limited to the team, and rotate the token (change `SHARED_TOKEN`, rebuild Pages) if it leaks.
+- Anyone who knows the script URL and token can append rows, read records, and generate within the daily cap. The token is in the public page source, so treat it as a doorbell code, not a secret: rotate it (change `SHARED_TOKEN` in Script properties, update `public/google-config.js`, rebuild Pages) if you see unexpected rows or usage.
 - Cells that start with `=` are stored with a leading apostrophe, exactly as the CSV export does, so prompts are never run as formulas. If you see a stray apostrophe elsewhere, report it; it means the plain-text format on the sheet was changed.
 - Deleting a row in the Sheet does not delete its images. Deleting the Sheet or renaming the `records` tab breaks the backend until `setup()` is run again (which creates a new Sheet).

@@ -74,3 +74,17 @@ test('Pages build switches to the Google bootstrap only when a script URL is con
  assert.ok(gas.includes("'paths','input','prompt','outputs','model used','judge','review','开源/闭源','tester','status','test date','record_id'"));
  assert.ok(!/ARK_KEY_(PRO|FLASH)\s*=\s*'[^']+'/.test(gas),'no keys in source');
 });
+
+test('Apps Script caps team generations per day before calling Ark',()=>{
+ const store={ARK_KEY_PRO:'key-pro',DAILY_LIMIT:'2'},fetches=[];let today='2026-11-02';
+ const context={PropertiesService:{getScriptProperties:()=>({getProperty:k=>store[k]??null,setProperty:(k,v)=>{store[k]=String(v)}})},LockService:{getScriptLock:()=>({tryLock:()=>true,releaseLock:()=>{}})},Utilities:{formatDate:()=>today},Session:{getScriptTimeZone:()=>'Asia/Shanghai'},UrlFetchApp:{fetch:()=>{fetches.push(1);return {getResponseCode:()=>200,getContentText:()=>JSON.stringify({data:[{b64_json:'aGVsbG8=',size:'800x1424'}]})}}},JSON,Object,Number,String,Array,Error,Date};
+ vm.runInNewContext(fs.readFileSync(path.join(root,'apps-script/Code.gs'),'utf8'),context);
+ const request={model:'doubao-seedream-5-0-pro-260628',prompt:'p',images:[],n:1};
+ context.generate(request);context.generate(request);
+ assert.throws(()=>context.generate(request),err=>err.status===429&&/daily limit of 2/.test(err.message));
+ assert.equal(fetches.length,2,'the capped request never reaches Ark');
+ assert.deepEqual(JSON.parse(JSON.stringify(context.status().daily)),{date:'2026-11-02',used:2,limit:2,timeZone:'Asia/Shanghai'});
+ assert.throws(()=>context.generate({...request,prompt:''}),/Enter a prompt/);assert.equal(JSON.parse(store.GEN_USAGE).count,2,'invalid requests are rejected before counting');
+ today='2026-11-03';context.generate(request);assert.deepEqual(JSON.parse(store.GEN_USAGE),{date:'2026-11-03',count:1},'the counter resets on a new day');
+ delete store.DAILY_LIMIT;assert.equal(context.status().daily.limit,1000);
+});

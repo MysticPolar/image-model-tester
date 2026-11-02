@@ -10,6 +10,8 @@
 //   FOLDER_ID      created by setup()
 //   ARK_KEY_PRO    Volcengine Ark key with access to doubao-seedream-5-0-pro-260628
 //   ARK_KEY_FLASH  Volcengine Ark key with access to doubao-seedream-5-0-flash-260915
+//   DAILY_LIMIT    optional; team-wide generations per day (default 1000)
+//   GEN_USAGE      managed by the script: today's generation count
 
 const PROPS = PropertiesService.getScriptProperties();
 const COLUMNS = ['paths','input','prompt','outputs','model used','judge','review','开源/闭源','tester','status','test date','record_id'];
@@ -22,6 +24,8 @@ const ARK_URL = 'https://ark.cn-beijing.volces.com/api/v3/images/generations';
 const SEEDREAM_SIZE = '800x1424'; // Official 1K / nominal 9:16 mapping, same as lib/volcengine.ts.
 const PATH_PATTERN = /^tests\/[a-zA-Z0-9_\/-]+\.(png|jpg|webp|txt|json)$/;
 const IMAGE_PATTERN = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+\/=\r\n]+$/;
+// The token is public in the Pages source, so this caps what anyone holding it can spend on Ark.
+const DAILY_LIMIT = 1000;
 
 // Run once from the Apps Script editor. Safe to run again: it only creates what is missing.
 function setup() {
@@ -82,7 +86,22 @@ function fail(message, status) { const err = new Error(message); err.status = st
 function status() {
   const models = {};
   Object.keys(MODELS).forEach(id => { const key = PROPS.getProperty(MODELS[id].prop) || ''; models[MODELS[id].slot] = {connected: key.length > 0, suffix: key.slice(-4)}; });
-  return {models, legacyKeyPresent:false, notice:'Keys are set once by the team owner in the Apps Script properties. Testers do not enter keys.', sheetUrl: sheetUrl(), folderUrl: folderUrl()};
+  return {models, legacyKeyPresent:false, notice:'Keys are set once by the team owner in the Apps Script properties. Testers do not enter keys.', sheetUrl: sheetUrl(), folderUrl: folderUrl(), daily: dailyUsage()};
+}
+
+// Team-wide daily generation counter, reset at midnight in the script's time zone.
+function dailyUsage() {
+  const date = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  let saved; try { saved = JSON.parse(PROPS.getProperty('GEN_USAGE') || '{}'); } catch (err) { saved = {}; }
+  return {date, used: saved.date === date ? Number(saved.count) || 0 : 0, limit: Number(PROPS.getProperty('DAILY_LIMIT')) || DAILY_LIMIT, timeZone: Session.getScriptTimeZone()};
+}
+// Counted before the Ark call, so failed attempts count too and a flood of bad requests is still capped.
+function reserveGeneration() {
+  return withLock(() => {
+    const usage = dailyUsage();
+    if (usage.used >= usage.limit) fail('The team daily limit of ' + usage.limit + ' generations is reached. It resets at midnight (' + usage.timeZone + ').', 429);
+    PROPS.setProperty('GEN_USAGE', JSON.stringify({date: usage.date, count: usage.used + 1}));
+  });
 }
 function sheetUrl() { return 'https://docs.google.com/spreadsheets/d/' + PROPS.getProperty('SHEET_ID'); }
 function folderUrl() { return 'https://drive.google.com/drive/folders/' + PROPS.getProperty('FOLDER_ID'); }
@@ -102,6 +121,7 @@ function generate(input) {
   if (!key) fail('The team owner has not set the Seedream ' + (model.slot === 'pro' ? 'Pro' : 'Flash') + ' key (' + model.prop + ') in the Apps Script properties.', 503);
   const payload = {model: input.model, prompt: input.prompt, size: SEEDREAM_SIZE, response_format:'b64_json', output_format:'png', watermark:true};
   if (images.length) payload.image = images;
+  reserveGeneration();
   const response = UrlFetchApp.fetch(ARK_URL, {method:'post', contentType:'application/json', headers:{Authorization:'Bearer ' + key}, payload: JSON.stringify(payload), muteHttpExceptions:true});
   const code = response.getResponseCode();
   if (code !== 200) {
@@ -159,7 +179,7 @@ function getFile(path) {
 
 function withLock(fn) {
   const lock = LockService.getScriptLock();
-  if (!lock.tryLock(30000)) fail('The records sheet is busy. Try again.', 503);
+  if (!lock.tryLock(30000)) fail('The team backend is busy. Try again.', 503);
   try { return fn(); } finally { lock.releaseLock(); }
 }
 function recordsSheet() {
