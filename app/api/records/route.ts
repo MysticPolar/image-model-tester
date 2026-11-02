@@ -13,7 +13,7 @@ export async function GET(request:Request) {
     const path=new URL(request.url).searchParams.get('file')||'test-records.csv';
     if(path!=='test-records.csv'&&!/^tests\/[a-zA-Z0-9_/-]+\.(png|jpg|webp|txt|json)$/.test(path))return Response.json({error:'Invalid file path.'},{status:400,headers});
     const prefix=archivePrefix(user.userId),image=/\.(png|jpg|webp)$/.test(path);
-    const key=prefix+(image?'assets/':`revisions/${object.etag}/`)+path;
+    const key=prefix+(image?'assets/':`revisions/v2/${object.etag}/`)+path;
     let file=await bucket.get(key);
     if(!file){await archiveRecords(bucket,user.userId,object.etag,await object.json());file=await bucket.get(key);}
     if(!file)return Response.json({error:'File not found.'},{status:404,headers});

@@ -104,17 +104,33 @@ The app has built successfully. Storage tests cover save/read, stale revisions, 
 
 ## Automatic test records and CSV archive
 
-Open **Test records** in the header (or `workbench.html#records`). Each model attempt has one record, including queued, running, successful, partial, and failed attempts. The tester name defaults to the signed-in display name and can be changed before a run. New records capture the signed-in account separately; historical tester names remain blank if they were not recorded.
+Open **Test records** in the header (or `workbench.html#records`). The screen and CSV have exactly these 11 columns, in this order:
 
-The log includes the prompt, ordered reference filenames and paths, output paths, model ID/provider, run settings, status/error, timestamps and duration. **Review** adds model source (开源 / 闭源 / unknown), judge type/name/model, verdict, optional 0–5 score, and notes. These are manual assessments; the app does not call a judge model. Source classification defaults to unknown unless configured or reviewed.
+1. paths
+2. input
+3. prompt
+4. outputs
+5. model used
+6. judge
+7. review
+8. 开源/闭源
+9. tester
+10. status
+11. test date
 
-Every successful workspace save also writes a UTF-8 `.csv` archive and named reference/output image files to private account-scoped R2 storage. Metadata is scoped by workspace revision to avoid races. An archive failure is reported separately from a workspace save failure; downloads retry materialization if needed. Existing workspaces are archived on their first save after upgrading.
+Each model attempt creates one record, including failed attempts. Path labels are assigned automatically (single-model runs: `1`, `2`; multiple models in a run: `3.1`, `3.2`) and can be edited by clicking the path. Labels must be unique dotted numbers. They remain stable in single-run exports. They are test labels, distinct from image file paths.
 
-- **All records CSV** downloads the current local log, including edits awaiting sync.
-- **CSV + all images** downloads a ZIP with `test-records.csv`, plus `tests/<timestamp>_<run-id>/prompt.txt`, ordered `references/`, and numbered `models/<index>_<model>/outputs/` folders with per-attempt `record.json`.
-- **Download all** on a run uses the same format for that run.
+Input and output columns show clickable image thumbnails; CSV contains ordered JSON arrays of their relative file paths. Prompt, output images, model name/ID, status, and date are captured by code. The tester defaults to the signed-in display name and can be changed before a run; account identity is retained in detailed metadata. Historical tester names remain blank when not previously recorded.
+
+**Judge** is always `To be implemented` and never runs AI evaluation. **Review** is human-only, with a reviewer name, verdict, optional 0–5 score, and notes stored together in its single CSV cell. Existing human assessments are preserved. **开源/闭源** has only two selectable classifications, 开源 and 闭源; unclassified records stay blank until assigned. There is no third classification.
+
+Every successful workspace save also writes a UTF-8 `.csv` archive and named reference/output files to private account-scoped R2 storage. Metadata is scoped by schema version and workspace revision, preventing stale CSV schemas and concurrent-save races. Images are stored once per run. Archive errors are reported separately from workspace-save failures, with retry on the next save or saved-cloud download.
+
+- **All records CSV** exports all current local records, including edits awaiting sync, in exactly the 11-column order above.
+- **CSV + all images** downloads a ZIP with `test-records.csv`, `tests/<timestamp>_<run-id>/prompt.txt`, ordered `references/`, and numbered `models/<index>_<model>/outputs/` folders. Detailed audit fields are kept in `record.json` rather than adding CSV columns.
+- **Download all** on an individual run uses the same format for that run.
 - `GET /api/records` downloads the latest saved cloud CSV; `?file=<relative-path>` retrieves an archived file for the signed-in account.
 
-Paths are portable archive paths, not the original PC's full filesystem paths (browsers do not provide those). Original reference basenames are preserved in CSV. Images remain their original PNG/JPEG/WebP bytes; CSV stores references, not embedded pictures. CSV cells are quoted, include a UTF-8 BOM for Chinese text, and neutralize spreadsheet formulas; `prompt.txt` retains the exact prompt. API keys are excluded.
+Image paths are portable ZIP paths, not the original PC's full filesystem paths (browsers do not provide those). Original names are retained in detailed metadata and organized filenames. Original PNG/JPEG/WebP bytes are preserved. CSV uses quoted cells, a UTF-8 BOM for Chinese text, and spreadsheet-formula protection; `prompt.txt` retains the exact prompt. API keys are excluded.
 
-Existing limits still apply: the active workspace has a 50 MB cloud payload limit, and generation requires keeping the tab open. A closed tab can leave a last-known queued/running status; this version is not a background job service.
+The existing 50 MB active workspace payload limit remains. Generation requires keeping the tab open; closing it can leave a last-known queued/running status.

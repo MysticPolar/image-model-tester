@@ -6,16 +6,33 @@ export function runFolder(run) { return `tests/${safeName(run.date)}_${safeName(
 export function referencePaths(run) { return (run.refs || []).map((ref, i) => `${runFolder(run)}/references/${pad(i)}_${safeName(String(ref.name || 'reference').replace(/\.[^.]+$/, ''))}.${ext(ref.data)}`); }
 export function resultFolder(run, item, index) { return `${runFolder(run)}/models/${pad(index)}_${safeName(item.name)}`; }
 export function outputPaths(run, item, index) { return (item.images || []).map((data, i) => `${resultFolder(run, item, index)}/outputs/${pad(i)}.${ext(data)}`); }
+export const AI_JUDGE_PLACEHOLDER = 'To be implemented';
+export function humanReview(item) { return item.humanReview || (item.review?.type !== 'model' ? item.review || {} : {}); }
+export function classification(value) { return ['open-source','closed-source'].includes(value) ? value : ''; }
+export function ensureRecordPaths(runs) {
+  const reserved = new Set((runs || []).flatMap(run => (run.results || []).map(item => item.path).filter(Boolean)));
+  (runs || []).forEach((run, runIndex) => {
+    let base = run.path || String(runIndex + 1);
+    const candidate = index => run.results.length > 1 ? `${base}.${index + 1}` : base;
+    while ((run.results || []).some((item, index) => !item.path && reserved.has(candidate(index)))) base = String(Number(base.split('.')[0]) + 1);
+    run.path = base;
+    (run.results || []).forEach((item, index) => { if (!item.path) { item.path = candidate(index); reserved.add(item.path); } });
+  });
+}
+export function humanReviewText(item) {
+  const review = humanReview(item);
+  return [review.verdict && review.verdict !== 'unreviewed' ? review.verdict : '', review.name ? `Reviewer: ${review.name}` : '', review.score !== '' && review.score != null ? `Score: ${review.score}/5` : '', review.notes || ''].filter(Boolean).join('\n') || 'Unreviewed';
+}
 export function recordRows(runs) {
-  return (runs || []).flatMap(run => (run.results || []).map((item, index) => {
-    const review = item.review || {}, config = item.config || {};
+  return (runs || []).flatMap((run, runIndex) => (run.results || []).map((item, index) => {
+    const review = humanReview(item), config = item.config || {};
     let endpoint = ''; try { const u = new URL(config.endpoint, 'https://tester.local'); endpoint = (u.origin === 'https://tester.local' ? '' : u.origin) + u.pathname; } catch {}
     return {
-      record_id: `${run.id}:${index + 1}`, run_id: run.id, created_at: run.date,
+      record_id: `${run.id}:${index + 1}`, path: item.path || (run.results.length > 1 ? `${run.path || runIndex + 1}.${index + 1}` : String(run.path || runIndex + 1)), run_id: run.id, created_at: run.date,
       started_at: item.startedAt || '', completed_at: item.completedAt || '',
       tester: run.tester || '', tester_account: run.testerAccount || '',
       model_name: item.name, model_id: config.model || '', provider: config.provider || 'custom',
-      model_source: review.modelSource || config.source || 'unknown', endpoint,
+      model_source: classification(item.modelSource || review.modelSource || item.review?.modelSource || config.source), endpoint,
       status: item.status || 'unknown', error: item.error || '', duration_seconds: item.duration || '',
       prompt: run.prompt || '', prompt_path: `${runFolder(run)}/prompt.txt`,
       reference_original_names: JSON.stringify((run.refs || []).map(ref => ref.name || '')),
@@ -29,13 +46,27 @@ export function recordRows(runs) {
     };
   }));
 }
-export const CSV_COLUMNS = Object.keys(recordRows([{id:'',date:'',results:[{}]}])[0]);
+export const CSV_COLUMNS = ['paths','input','prompt','outputs','model used','judge','review','开源/闭源','tester','status','test date'];
+export function reportRows(runs) {
+  const details = recordRows(runs); let position = 0;
+  return (runs || []).flatMap(run => (run.results || []).map(item => {
+    const row = details[position++];
+    return {
+      paths: row.path, input: row.reference_paths, prompt: row.prompt, outputs: row.output_paths,
+      'model used': row.model_name + (row.model_id ? ` (${row.model_id})` : ''),
+      judge: AI_JUDGE_PLACEHOLDER, review: humanReviewText(item),
+      '开源/闭源': row.model_source === 'open-source' ? '开源' : row.model_source === 'closed-source' ? '闭源' : '',
+      tester: row.tester, status: row.status, 'test date': row.created_at
+    };
+  }));
+}
 export function recordsCSV(runs) {
   // Quoting protects commas/newlines; apostrophe protects spreadsheet formula execution.
   const cell = value => { let s = String(value ?? ''); if (/^[\s]*[=+@-]/.test(s) || /^[\t\r\n]/.test(s)) s = "'" + s; return '"' + s.replace(/"/g, '""') + '"'; };
-  return '\uFEFF' + [CSV_COLUMNS, ...recordRows(runs).map(row => CSV_COLUMNS.map(key => row[key]))].map(row => row.map(cell).join(',')).join('\r\n') + '\r\n';
+  return '\uFEFF' + [CSV_COLUMNS, ...reportRows(runs).map(row => CSV_COLUMNS.map(key => row[key]))].map(row => row.map(cell).join(',')).join('\r\n') + '\r\n';
 }
 export function recordFiles(runs) {
+  ensureRecordPaths(runs);
   const files = [], encoder = new TextEncoder();
   const text = (name, value, type) => files.push({name, data:encoder.encode(value), type});
   const image = (name, value) => {

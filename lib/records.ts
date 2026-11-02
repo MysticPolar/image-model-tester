@@ -7,7 +7,7 @@ export async function archiveRecords(bucket:R2Bucket,userId:string,revision:stri
   // Image bytes are immutable for a run, so store them once under their named path.
   for (const file of recordFiles(workspace.runs)) {
     const image = file.type.startsWith('image/');
-    const key = prefix + (image ? 'assets/' : `revisions/${revision}/`) + file.name;
+    const key = prefix + (image ? 'assets/' : `revisions/v2/${revision}/`) + file.name;
     if (image && await bucket.head(key)) continue;
     await bucket.put(key, file.data, {httpMetadata:{contentType:file.type}});
   }
